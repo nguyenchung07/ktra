@@ -1,0 +1,225 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 1. Tải và chia dữ liệu
+def load_data():
+    """
+    Tải dữ liệu và chia thành tập huấn luyện và kiểm tra
+    Returns:
+        X_train, X_test, y_train, y_test: Các tập dữ liệu đã chia
+    """
+    # Đọc dữ liệu từ file CSV
+    diabetes = pd.read_csv(r'c:\Users\ADMIN\Downloads\diabetes2.csv')
+    
+    # Kiểm tra dữ liệu
+    print("Thông tin về tập dữ liệu:")
+    print(f"Số lượng mẫu: {len(diabetes)}")
+    print(f"Số lượng đặc trưng: {len(diabetes.columns) - 1}")
+    print("\nThống kê mô tả:")
+    print(diabetes.describe())
+    
+    # Chia features và target
+    X = diabetes.drop('Outcome', axis=1)
+    y = diabetes['Outcome']
+    
+    # Chia tập dữ liệu (80% train, 20% test)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    #Hiển thị kích thước mỗi tập
+    print(f"\nKích thước tập huấn luyện: {X_train.shape}")
+    print(f"Kích thước tập kiểm tra: {X_test.shape}")
+    
+    return X_train, X_test, y_train, y_test
+
+# 2. Tiền xử lý dữ liệu
+def preprocess_data(X_train, X_test):
+    """
+    Chuẩn hóa dữ liệu sử dụng StandardScaler
+    Args:
+        X_train: Tập huấn luyện
+        X_test: Tập kiểm tra
+    Returns:
+        X_train_scaled, X_test_scaled: Dữ liệu đã chuẩn hóa
+    """
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    print("\nThông tin về chuẩn hóa dữ liệu:")
+    print("Mean của các đặc trưng sau chuẩn hóa:", np.mean(X_train_scaled, axis=0))
+    print("Std của các đặc trưng sau chuẩn hóa:", np.std(X_train_scaled, axis=0))
+    
+    return X_train_scaled, X_test_scaled, scaler
+
+# 3. Xây dựng và huấn luyện mô hình Logistic Regression
+def train_logistic_regression(X_train, y_train):
+    """
+    Huấn luyện mô hình Logistic Regression
+    """
+    model = LogisticRegression(random_state=42, max_iter=1000)
+    model.fit(X_train, y_train)
+    print("\nThông tin về mô hình Logistic Regression:")
+    print("Hệ số hồi quy:", model.coef_[0])
+    print("Intercept:", model.intercept_[0])
+    return model
+
+# 4. Đánh giá mô hình
+def evaluate_model(model, X_test, y_test, model_name="Model"):
+    """
+    Đánh giá mô hình và vẽ confusion matrix
+    """
+    # Dự đoán
+    y_pred = model.predict(X_test)
+    
+    # Tính các chỉ số đánh giá
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    
+    print(f"\nKết quả đánh giá {model_name}:")
+    print(f"Độ chính xác (Accuracy): {accuracy:.4f}")
+    print(f"Độ chính xác (Precision): {precision:.4f}")
+    print(f"Độ nhạy (Recall): {recall:.4f}")
+    print(f"F1-score: {f1:.4f}")
+    
+    # Vẽ confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.title(f'Confusion Matrix - {model_name}')
+    plt.ylabel('Thực tế')
+    plt.xlabel('Dự đoán')
+    plt.show()
+    
+    return accuracy, precision, recall, f1
+
+# 5. Huấn luyện và đánh giá mô hình SVM
+def train_svm(X_train, y_train):
+    """
+    Huấn luyện mô hình SVM
+    """
+    svm_model = SVC(kernel='rbf', random_state=42)
+    svm_model.fit(X_train, y_train)
+    print("\nThông tin về mô hình SVM:")
+    print("Số lượng support vectors:", len(svm_model.support_))
+    return svm_model
+
+# 6. So sánh và đưa ra khuyến nghị
+def compare_and_recommend(metrics_df):
+    """
+    So sánh các mô hình và đưa ra khuyến nghị
+    """
+    print("\nPHÂN TÍCH SO SÁNH CÁC MÔ HÌNH:")
+    print("="*50)
+    
+    # So sánh từng metric
+    best_accuracy = metrics_df.loc['Accuracy'].idxmax()
+    best_precision = metrics_df.loc['Precision'].idxmax()
+    best_recall = metrics_df.loc['Recall'].idxmax()
+    best_f1 = metrics_df.loc['F1-score'].idxmax()
+    
+    print("\n1. So sánh hiệu suất:")
+    print(f"- Độ chính xác (Accuracy) tốt nhất: {best_accuracy} ({metrics_df.loc['Accuracy', best_accuracy]:.4f})")
+    print(f"- Độ chính xác (Precision) tốt nhất: {best_precision} ({metrics_df.loc['Precision', best_precision]:.4f})")
+    print(f"- Độ nhạy (Recall) tốt nhất: {best_recall} ({metrics_df.loc['Recall', best_recall]:.4f})")
+    print(f"- F1-score tốt nhất: {best_f1} ({metrics_df.loc['F1-score', best_f1]:.4f})")
+    
+    print("\n2. Phân tích đặc điểm:")
+    print("Logistic Regression:")
+    print("- Ưu điểm:")
+    print("  + Mô hình đơn giản, dễ hiểu và triển khai")
+    print("  + Huấn luyện nhanh, phù hợp với dữ liệu lớn")
+    print("  + Cung cấp xác suất dự đoán rõ ràng")
+    print("- Nhược điểm:")
+    print("  + Giả định về mối quan hệ tuyến tính")
+    print("  + Có thể không hiệu quả với dữ liệu phi tuyến tính")
+    
+    print("\nSVM:")
+    print("- Ưu điểm:")
+    print("  + Hiệu quả với dữ liệu có nhiều chiều")
+    print("  + Xử lý tốt dữ liệu phi tuyến tính thông qua kernel")
+    print("  + Ít bị ảnh hưởng bởi outliers")
+    print("- Nhược điểm:")
+    print("  + Thời gian huấn luyện lâu hơn")
+    print("  + Khó điều chỉnh tham số tối ưu")
+    print("  + Không cung cấp xác suất dự đoán trực tiếp")
+    
+    # Đưa ra khuyến nghị
+    print("\n3. Khuyến nghị:")
+    main_scores = metrics_df.mean()
+    best_model = main_scores.idxmax()
+    print(f"Dựa trên kết quả thực nghiệm, {best_model} là lựa chọn tối ưu hơn vì:")
+    print(f"- Có điểm trung bình cao nhất trên tất cả các metrics: {main_scores[best_model]:.4f}")
+    print(f"- Phù hợp với đặc điểm của bài toán phân loại bệnh tiểu đường")
+    print("\nLưu ý: Việc lựa chọn mô hình cuối cùng nên dựa trên:")
+    print("- Yêu cầu cụ thể về độ chính xác/độ nhạy của bài toán")
+    print("- Khả năng giải thích của mô hình")
+    print("- Yêu cầu về thời gian xử lý và tài nguyên tính toán")
+    
+    return best_model
+
+def main():
+    """
+    Hàm chính thực hiện toàn bộ quá trình
+    """
+    print("BẮT ĐẦU QUÁ TRÌNH PHÂN LOẠI BỆNH TIỂU ĐƯỜNG")
+    print("="*50)
+    
+    # 1. Tải và chia dữ liệu
+    X_train, X_test, y_train, y_test = load_data()
+    
+    # 2. Tiền xử lý dữ liệu
+    X_train_scaled, X_test_scaled, scaler = preprocess_data(X_train, X_test)
+    
+    # 3. Huấn luyện và đánh giá Logistic Regression
+    print("\nHUẤN LUYỆN VÀ ĐÁNH GIÁ LOGISTIC REGRESSION")
+    print("-"*50)
+    log_reg_model = train_logistic_regression(X_train_scaled, y_train)
+    log_reg_metrics = evaluate_model(log_reg_model, X_test_scaled, y_test, "Logistic Regression")
+    
+    # 5. Huấn luyện và đánh giá SVM
+    print("\nHUẤN LUYỆN VÀ ĐÁNH GIÁ SVM")
+    print("-"*50)
+    svm_model = train_svm(X_train_scaled, y_train)
+    svm_metrics = evaluate_model(svm_model, X_test_scaled, y_test, "SVM")
+    
+    # 5. So sánh kết quả
+    print("\nSO SÁNH KẾT QUẢ GIỮA CÁC MÔ HÌNH:")
+    print("-"*50)
+    metrics = pd.DataFrame({
+        'Logistic Regression': list(log_reg_metrics),
+        'SVM': list(svm_metrics)
+    }, index=['Accuracy', 'Precision', 'Recall', 'F1-score'])
+    print("\nBảng so sánh các metrics:")
+    print(metrics)
+    
+    # Vẽ biểu đồ so sánh
+    plt.figure(figsize=(12, 6))
+    ax = metrics.plot(kind='bar', figsize=(10, 6))
+    plt.title('So sánh hiệu suất các mô hình')
+    plt.ylabel('Giá trị')
+    plt.xlabel('Metrics')
+    plt.legend(title='Mô hình')
+    
+    # Thêm giá trị lên các cột
+    for i in ax.containers:
+        ax.bar_label(i, fmt='%.4f')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    # 6. So sánh và đưa ra khuyến nghị
+    best_model = compare_and_recommend(metrics)
+    
+    print("\nKẾT THÚC CHƯƠNG TRÌNH")
+    print("="*50)
+
+if __name__ == "__main__":
+    main()
